@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Traitors — Social Deduction Game</title>
+<style>
+:root{--bg:#101018;--panel:#1b1b29;--panel2:#242438;--gold:#d8b56d;--cream:#f4eddf;--muted:#aaa6b8;--red:#b94b57;--green:#5b9b79;--line:#38384c}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#292338 0,#101018 55%);color:var(--cream);font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+header{padding:25px 18px 18px;text-align:center;border-bottom:1px solid var(--line);background:#0c0c13bb}
+.eyebrow{color:var(--gold);letter-spacing:.24em;text-transform:uppercase;font-size:.72rem;font-weight:800}
+h1{font-family:Georgia,serif;font-weight:500;letter-spacing:.06em;margin:5px 0;font-size:clamp(2rem,6vw,3.4rem)}
+header p{margin:0;color:var(--muted)}main{max-width:1050px;margin:auto;padding:22px 16px 60px}
+.panel{background:linear-gradient(145deg,#202031,#171722);border:1px solid var(--line);border-radius:17px;padding:20px;margin:0 0 16px;box-shadow:0 12px 35px #0003}
+h2{font:500 1.5rem Georgia,serif;margin:0 0 12px;color:var(--gold)}
+h3{margin:0 0 8px;font-size:1.05rem}
+label{display:block;color:var(--muted);font-size:.88rem;margin:10px 0 5px}
+input,select,textarea{width:100%;background:#11111b;color:var(--cream);border:1px solid #48475c;border-radius:9px;padding:11px;font:inherit}
+button{background:var(--gold);color:#211a11;border:0;border-radius:10px;padding:11px 16px;font-weight:800;font-size:.95rem;cursor:pointer}
+button:hover{filter:brightness(1.08)}button.secondary{background:#343348;color:var(--cream);border:1px solid #55536a}button.danger{background:#803b47;color:white}button:disabled{opacity:.4;cursor:not-allowed}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1}
+.muted{color:var(--muted)}.small{font-size:.85rem}.hidden{display:none!important}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:4px 9px;font-size:.75rem;color:var(--muted);margin:2px}
+.stat{background:#12121c;border:1px solid var(--line);padding:12px;border-radius:12px;text-align:center}
+.stat strong{display:block;font:1.5rem Georgia;color:var(--gold)}
+.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}
+.player{background:#151521;border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.player.out{opacity:.42;text-decoration:line-through}.role{font-size:.72rem;color:var(--gold)}
+.log{background:#101019;border:1px solid var(--line);border-radius:10px;padding:12px;max-height:220px;overflow:auto}
+.log p{margin:0 0 8px;padding-bottom:8px;border-bottom:1px solid #29293a}.log p:last-child{border:0;margin:0;padding:0}
+.notice{border-left:3px solid var(--gold);padding:10px 13px;background:#d8b56d12;border-radius:0 8px 8px 0;margin:12px 0}
+.rolecard{text-align:center;padding:24px;background:#11111b;border:1px solid var(--gold);border-radius:14px}
+.rolecard strong{display:block;font:2rem Georgia;color:var(--gold);margin:8px}
+footer{text-align:center;color:var(--muted);font-size:.78rem;padding:10px}
+@media(max-width:520px){.panel{padding:15px}button{width:100%}.row{display:grid;grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="eyebrow">A social deduction game</div><h1>THE TRAITORS</h1><p>Twenty contestants. Secrets, suspicion and a prize fund.</p></header>
+<main>
+<section id="setup" class="panel">
+<h2>Welcome to the castle</h2>
+<p class="muted">Choose a way to play. This is an original fan-made social deduction game, not an official TV-show game.</p>
+<div class="grid">
+ <div><label for="mode">Game mode</label><select id="mode"><option value="pvp">People vs People — pass the device and keep roles secret</option><option value="ai">AI vs People — you play alongside computer contestants</option><option value="charity">Charity vs Charity — two custom teams compete in a fictional game</option></select></div>
+ <div><label for="traitors">Number of secret Traitors</label><select id="traitors"><option>3</option><option>2</option><option>4</option></select></div>
+ <div><label for="fund">Starting prize fund (£)</label><input id="fund" type="number" min="0" max="1000000" value="0"></div>
+</div>
+<div id="peopleSetup">
+ <label for="names">Contestant names (20, one per line)</label>
+ <textarea id="names" rows="8">Alex
+Bailey
+Casey
+Drew
+Elliot
+Finley
+Gray
+Harper
+Indigo
+Jamie
+Kai
+Logan
+Morgan
+Noah
+Oakley
+Parker
+Quinn
+Riley
+Sasha
+Taylor</textarea>
+ <p class="small muted">For People vs People, use real first names or nicknames and pass the device around privately to reveal each role.</p>
+</div>
+<div id="charitySetup" class="grid hidden">
+ <div><label for="teamA">Team / charity A name</label><input id="teamA" value="Team Hope"></div>
+ <div><label for="teamB">Team / charity B name</label><input id="teamB" value="Team Kindness"></div>
+</div>
+<div class="notice small">Safety note: “Murder” is only a fictional elimination mechanic in this game. No real-world harm is involved. Charity mode is a pretend competition and does not collect or donate money.</div>
+<button id="start">Enter the castle</button>
+</section>
+
+<section id="game" class="hidden">
+<div class="grid" style="margin-bottom:16px">
+ <div class="stat"><strong id="roundStat">1</strong><span class="small muted">Round</span></div>
+ <div class="stat"><strong id="aliveStat">20</strong><span class="small muted">Remaining</span></div>
+ <div class="stat"><strong id="fundStat">£0</strong><span class="small muted">Prize fund</span></div>
+ <div class="stat"><strong id="phaseStat">Roles</strong><span class="small muted">Phase</span></div>
+</div>
+<div class="panel" id="rolePanel">
+ <h2>Secret role assignment</h2>
+ <p class="muted">Each contestant should reveal their role privately. Don't let the others see the screen.</p>
+ <div id="roleReveal" class="rolecard"><div class="muted">Pass the device to the first contestant.</div><strong>Ready?</strong><button id="revealRole">Reveal role</button></div>
+ <div class="row" style="margin-top:12px"><button class="secondary" id="nextRole" disabled>Next contestant</button><button class="secondary" id="finishRoles" disabled>Finish role reveal</button></div>
+</div>
+<div class="panel hidden" id="roundPanel">
+ <h2 id="phaseTitle">The mission</h2><p id="phaseText" class="muted"></p>
+ <div id="phaseContent"></div>
+ <div class="row" style="margin-top:14px"><button id="phaseAction">Continue</button></div>
+</div>
+<div class="panel">
+ <h2>Contestants</h2><div id="roster" class="players"></div>
+</div>
+<div class="panel">
+ <h2>Castle diary</h2><div id="diary" class="log"><p>The contestants have arrived at the castle.</p></div>
+</div>
+<div class="row"><button class="secondary" id="restart">Restart game</button><button class="secondary" id="rules">How to play</button></div>
+</section>
+</main>
+<footer>Fan-made social deduction game • No official affiliation • Play kindly and keep secret roles private</footer>
+<script>
+const $=id=>document.getElementById(id);
+let state={players:[],traitors:3,round:1,fund:0,mode:'pvp',phase:'roles',roleIndex:0,rolesSeen:false,teamA:'',teamB:'',votes:{},missionDone:false};
+function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+function alive(){return state.players.filter(p=>p.alive)}
+function log(msg){let p=document.createElement('p');p.textContent=msg;$('diary').prepend(p)}
+function update(){
+ $('roundStat').textContent=state.round;$('aliveStat').textContent=alive().length;$('fundStat').textContent='£'+state.fund.toLocaleString('en-GB');$('phaseStat').textContent=state.phase[0].toUpperCase()+state.phase.slice(1);
+ $('roster').innerHTML=state.players.map(p=>`<div class="player ${p.alive?'':'out'}"><span>${esc(p.name)}</span><span class="role">${p.alive?'IN GAME':'OUT'}</span></div>`).join('');
+}
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function start(){
+ let names=$('names').value.split('\n').map(x=>x.trim()).filter(Boolean);
+ if($('mode').value!=='charity'&&names.length!==20){alert('Please enter exactly 20 contestant names.');return}
+ if(new Set(names.map(x=>x.toLowerCase())).size!==names.length){alert('Please make every contestant name unique.');return}
+ state.mode=$('mode').value;state.traitors=+$('traitors').value;state.fund=Math.max(0,+$('fund').value||0);state.round=1;state.teamA=$('teamA').value;state.teamB=$('teamB').value;
+ if(state.mode==='ai'){names[0]='You';}
+ if(state.mode==='charity'){names=[state.teamA+' — player 1',state.teamA+' — player 2',state.teamA+' — player 3',state.teamA+' — player 4',state.teamA+' — player 5',state.teamA+' — player 6',state.teamA+' — player 7',state.teamA+' — player 8',state.teamA+' — player 9',state.teamA+' — player 10',state.teamB+' — player 1',state.teamB+' — player 2',state.teamB+' — player 3',state.teamB+' — player 4',state.teamB+' — player 5',state.teamB+' — player 6',state.teamB+' — player 7',state.teamB+' — player 8',state.teamB+' — player 9',state.teamB+' — player 10']}
+ let roles=shuffle([...Array(state.traitors).fill('Traitor'),...Array(20-state.traitors).fill('Faithful')]);
+ state.players=names.map((name,i)=>({name,role:roles[i],alive:true,team:state.mode==='charity'?(i<10?'A':'B'):null}));
+ $('setup').classList.add('hidden');$('game').classList.remove('hidden');$('rolePanel').classList.remove('hidden');$('roundPanel').classList.add('hidden');
+ $('roleReveal').innerHTML='<div class="muted">'+(state.mode==='ai'?'Your secret role':'Pass the device to')+'</div><strong>'+esc(state.players[0].name)+'</strong><button id="revealRole">Reveal role</button>';
+ $('revealRole').onclick=reveal; $('nextRole').disabled=state.mode==='ai';$('finishRoles').disabled=true;state.roleIndex=0;state.phase='roles';if(state.mode==='ai')$('roleReveal').querySelector('button').onclick=()=>{reveal();$('nextRole').disabled=true;$('finishRoles').disabled=false;$('finishRoles').textContent='Start game'};log('The game begins. Twenty contestants have entered the castle.');update();
+}
+function reveal(){let p=state.players[state.roleIndex];$('roleReveal').innerHTML='<div class="muted">'+esc(p.name)+', your secret role is…</div><strong>'+p.role.toUpperCase()+'</strong><div class="small muted">'+(p.role==='Traitor'?'You are on the secret Traitor team.':'Find the Traitors and survive the votes.')+'</div><p class="small muted">Memorise your role, then hide the screen before passing the device.</p>'; $('nextRole').disabled=false;$('revealRole')?.remove()}
+function nextRole(){state.roleIndex++;if(state.roleIndex>=20){$('roleReveal').innerHTML='<strong>All roles assigned</strong><p class="muted">Everyone knows their own role. Keep it secret.</p>';$('nextRole').disabled=true;$('finishRoles').disabled=false;return}
+ $('roleReveal').innerHTML='<div class="muted">Pass the device to</div><strong>'+esc(state.players[state.roleIndex].name)+'</strong><button id="revealRole">Reveal role</button>';$('revealRole').onclick=reveal;$('nextRole').disabled=true}
+function beginRounds(){ $('rolePanel').classList.add('hidden');$('roundPanel').classList.remove('hidden');mission()}
+function setPhase(title,desc,content,action,fn){$('phaseTitle').textContent=title;$('phaseText').textContent=desc;$('phaseContent').innerHTML=content;$('phaseAction').textContent=action;$('phaseAction').onclick=fn;state.phase=title.toLowerCase();update()}
+function mission(){let gain=1000+Math.floor(Math.random()*4001);setPhase('The mission','The contestants complete a team challenge. The host awards a fictional amount to the prize fund.',`<div class="stat"><strong>£${gain.toLocaleString('en-GB')}</strong><span class="small muted">Potential prize-fund reward</span></div><p class="small muted">Click to award this mission reward.</p>`,'Award reward',()=>{state.fund+=gain;log('Mission completed. £'+gain.toLocaleString('en-GB')+' added to the prize fund.');breakfast()})}
+function breakfast(){let living=alive();let traitors=living.filter(p=>p.role==='Traitor');if(traitors.length===0){endGame('Faithful');return}
+ if(state.mode==='ai'){let victims=living.filter(p=>p.role==='Faithful');if(victims.length){let victim=victims[Math.floor(Math.random()*victims.length)];victim.alive=false;log('At breakfast, '+victim.name+' is revealed to have been eliminated overnight.');}
+ }else{setPhase('The night','Traitors: secretly agree on one Faithful to eliminate. For a pass-and-play game, the Traitors should confer privately, then select their target.',`<label>Choose a Faithful contestant</label><select id="victim">${living.filter(p=>p.role==='Faithful').map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select>`,'Reveal at breakfast',()=>{let p=state.players.find(p=>p.name===$('victim').value);if(p){p.alive=false;log('At breakfast, '+p.name+' is revealed to have been eliminated overnight.')}roundTable()});return}
+ roundTable()}
+function roundTable(){if(alive().filter(p=>p.role==='Traitor').length===0){endGame('Faithful');return}
+ let options=alive().map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+ if(state.mode==='ai'){
+   setPhase('The Round Table','You are the human contestant. Choose who to vote for; the computer contestants will cast their own votes.',`<label>Your vote</label><select id="banish">${options}</select><p class="small muted">The AI contestants will also vote. Their votes are simulated for this prototype.</p>`,'Cast votes',()=>{
+    let candidates=alive(), votes={};candidates.forEach(v=>votes[v.name]=0);
+    let yourPick=$('banish').value;votes[yourPick]++;
+    candidates.filter(p=>p.name!=='You').forEach(()=>{let pick=candidates[Math.floor(Math.random()*candidates.length)];votes[pick.name]++});
+    let max=Math.max(...Object.values(votes));let out=shuffle(candidates.filter(p=>votes[p.name]===max))[0];out.alive=false;
+    log('The Round Table has banished '+out.name+'. They were '+out.role+'.');if(out.role==='Traitor')log('A Traitor has been banished!');update();checkWin();if(alive().length>1)nextRound()
+   });return;
+ }
+ setPhase('The Round Table','Discuss suspicions, then vote. The contestant with the most votes is banished.',`<label>Who is being banished?</label><select id="banish">${options}</select><label>Role reveal after the vote</label><p class="small muted">The host will reveal the banished contestant’s role.</p>`,'Cast vote',()=>{let p=state.players.find(p=>p.name===$('banish').value);p.alive=false;log('The Round Table has banished '+p.name+'. They were '+p.role+'.');if(p.role==='Traitor')log('The group has banished a Traitor!');update();checkWin();if(alive().length>1)nextRound()});
+}
+function checkWin(){let t=alive().filter(p=>p.role==='Traitor').length,f=alive().length-t;if(t===0)endGame('Faithful');else if(t>=f)endGame('Traitors')}
+function nextRound(){if(alive().length<=2){endGame(alive().some(p=>p.role==='Traitor')?'Traitors':'Faithful');return}state.round++;update();mission()}
+function endGame(winner){setPhase('The finale',winner+' win the game!',`<div class="rolecard"><div class="muted">THE WINNERS</div><strong>${winner.toUpperCase()}</strong><p>Final prize fund: £${state.fund.toLocaleString('en-GB')}</p></div><h3>Final roles</h3><div class="players">${state.players.map(p=>`<div class="player ${p.alive?'':'out'}"><span>${esc(p.name)}</span><span class="role">${p.role}</span></div>`).join('')}</div>`,'Play again',()=>location.reload());log(winner+' win the game!');$('phaseAction').className=''}
+$('start').onclick=start;$('revealRole').onclick=reveal;$('nextRole').onclick=nextRole;$('finishRoles').onclick=beginRounds;
+$('restart').onclick=()=>{if(confirm('Restart and erase this game?'))location.reload()};
+$('rules').onclick=()=>alert('MISSION: earn money for the fictional prize fund. NIGHT: Traitors choose a Faithful to eliminate. BREAKFAST: reveal the eliminated player. ROUND TABLE: vote to banish one contestant and reveal their role. Faithful win when all Traitors are gone. Traitors win when they equal or outnumber the Faithful. In AI mode, the computer simulates the other contestants. In people mode, pass the device and keep roles secret.');
+$('mode').onchange=()=>{$('peopleSetup').classList.toggle('hidden',$('mode').value==='charity');$('charitySetup').classList.toggle('hidden',$('mode').value!=='charity')};
+</script>
+</body></html>
